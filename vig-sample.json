@@ -1,0 +1,62 @@
+{
+  "template": "AGEMA",
+  "customer": {
+    "name": "Legrand (S) Pte Ltd",
+    "address": "17 Neythal Road, Singapore 628582",
+    "attention": "Chong Chun Fook",
+    "email": "chunfook.chong@legrand.com"
+  },
+  "quotation": {
+    "ref_no": "Q/SSM/8171/2024",
+    "date": "2024-09-17",
+    "from": "Nur Afiq",
+    "items": [
+      {
+        "description": "Smoke Detector (FSP-951) c/w base",
+        "qty": "1 lot",
+        "unit_price": 2200,
+        "total": 2200
+      },
+      {
+        "description": "Interface Control Module (FRM-1)",
+        "qty": "1 nos.",
+        "unit_price": 290,
+        "total": 290
+      },
+      {
+        "description": "Supply and Install addressable module",
+        "qty": "1 nos.",
+        "unit_price": 285,
+        "total": 285
+      },
+      {
+        "description": "Engineering Programming for Addressable Fire Alarm Panel (NFS2-3030)",
+        "qty": "1 lot",
+        "unit_price": 1800,
+        "total": 1800
+      },
+      {
+        "description": "Mapping & Updating of PC Graphics Station",
+        "qty": "1 lot",
+        "unit_price": 3500,
+        "total": 3500
+      },
+      {
+        "description": "Isolation, Testing & Commissioning of Fire Alarm and Suppression Systems",
+        "qty": "1 lot",
+        "unit_price": 600,
+        "total": 600
+      }
+    ],
+    "gst_rate": 9,
+    "remarks": [
+      "Any additional items required other than the above quotation will be charged separately.",
+      "Updating of Main/Sub Mimic Zone chart including expansion loop card, if required.",
+      "Supply and Install of additional Loop Card, if required."
+    ]
+  },
+  "terms": {
+    "payment": "30 days",
+    "validity": "30 days"
+  }
+}
