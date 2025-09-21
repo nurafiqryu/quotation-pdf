@@ -1,36 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const PDFDocument = require('pdfmake');
 const fs = require('fs');
 const path = require('path');
-const PdfPrinter = require('pdfmake');
-const cors = require('cors');
 
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3000;
+
 app.use(bodyParser.json());
 
-// Fonts (shared across all templates)
-const fonts = {
-  Roboto: {
-    normal: path.join(__dirname, 'fonts/Roboto-Regular.ttf'),
-    bold: path.join(__dirname, 'fonts/Roboto-Medium.ttf'),
-    italics: path.join(__dirname, 'fonts/Roboto-Italic.ttf'),
-    bolditalics: path.join(__dirname, 'fonts/Roboto-MediumItalic.ttf')
-  }
-};
-const printer = new PdfPrinter(fonts);
-
-// Serve generated PDFs (for /public links)
-app.use('/public', express.static(path.join(__dirname, 'public')));
-
-// ✅ Health check endpoint (for uptime pings)
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
-// ✅ Helper to load templates safely
+// ✅ Helper to load templates safely (case sensitive)
 function loadTemplate(templateName) {
-  const safeName = (templateName || 'default').toLowerCase();
+  const safeName = templateName || 'default';
   const templatePath = path.join(__dirname, 'templates', safeName, 'template.js');
 
   console.log('🔍 Looking for template at:', templatePath);
@@ -40,59 +21,65 @@ function loadTemplate(templateName) {
     delete require.cache[require.resolve(templatePath)];
     return require(templatePath);
   } else {
-    console.warn(⚠️ Template "${safeName}" not found, falling back to default.`);
+    console.warn(`⚠️ Template "${safeName}" not found, falling back to default.`);
     const defaultPath = path.join(__dirname, 'templates', 'default', 'template.js');
     delete require.cache[require.resolve(defaultPath)];
     return require(defaultPath);
   }
 }
 
-// ✅ Generate PDF and return it directly
+// ✅ Route to generate quotation PDFs
 app.post('/generate-quotation', async (req, res) => {
   try {
-    const template = loadTemplate(req.body.template);
-    const docDefinition = template.build(req.body);
+    const { template, ...data } = req.body;
+    const templateModule = loadTemplate(template);
+    const docDefinition = await templateModule.generateDocDefinition(data);
+
+    const printer = new PDFDocument({
+      Roboto: {
+        normal: path.join(__dirname, 'static', 'fonts', 'Roboto-Regular.ttf'),
+        bold: path.join(__dirname, 'static', 'fonts', 'Roboto-Medium.ttf'),
+        italics: path.join(__dirname, 'static', 'fonts', 'Roboto-Italic.ttf'),
+        bolditalics: path.join(__dirname, 'static', 'fonts', 'Roboto-MediumItalic.ttf')
+      }
+    });
+
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
 
-    res.setHeader('Content-Type', 'application/pdf');
-    pdfDoc.pipe(res);
-    pdfDoc.end();
-  } catch (err) {
-    console.error('❌ Error generating PDF:', err);
-    res.status(500).json({ error: 'Failed to generate PDF' });
-  }
-});
+    const outputDir = path.join(__dirname, 'public');
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
-// ✅ Generate PDF, save file, and return a link
-app.post('/generate-quotation-link', async (req, res) => {
-  try {
-    const template = loadTemplate(req.body.template);
-    const docDefinition = template.build(req.body);
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    const fileName = `Quotation-${Date.now()}.pdf`;
+    const filePath = path.join(outputDir, fileName);
 
-    // Sanitize filename so it won't break with slashes/spaces/etc.
-    const rawRef = req.body.quotation?.ref_no || Date.now().toString();
-    const safeRef = rawRef.replace(/[^a-zA-Z0-9-_]/g, '_'); // allow only letters, numbers, - and _
-    const filename = `Quotation-${safeRef}.pdf`;
-
-    const filePath = path.join(__dirname, 'public', filename);
-
-    const stream = fs.createWriteStream(filePath);
-    pdfDoc.pipe(stream);
+    const writeStream = fs.createWriteStream(filePath);
+    pdfDoc.pipe(writeStream);
     pdfDoc.end();
 
-    stream.on('finish', () => {
-      const url = `${req.protocol}://${req.get('host')}/public/${filename}`;
-      res.json({ url });
+    writeStream.on('finish', () => {
+      const fileUrl = `${req.protocol}://${req.get('host')}/public/${fileName}`;
+      res.json({ success: true, file: fileUrl });
+    });
+
+    writeStream.on('error', (err) => {
+      console.error('❌ WriteStream error:', err);
+      res.status(500).json({ success: false, message: 'Error saving PDF' });
     });
 
   } catch (err) {
     console.error('❌ Error generating PDF:', err);
-    res.status(500).json({ error: 'Failed to generate PDF' });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-const PORT = process.env.PORT || 8080;
+// ✅ Health check route
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+// ✅ Static hosting for generated files
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 app.listen(PORT, () => {
-  console.log(`🚀 PDF server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
