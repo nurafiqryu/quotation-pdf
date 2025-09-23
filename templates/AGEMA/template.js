@@ -214,13 +214,6 @@ function generateDocDefinition(data) {
   const thankYou = { text: smallThanks, style: 'smallNote', margin: [0, 6, 0, 2] };
 
 
-    images: {
-      logo: 'data:image/png;base64,' + loadImage(templateDir, 'logo.png'),
-      bcaLogo: 'data:image/png;base64,' + loadImage(templateDir, 'bca-logo.png'),
-      bizsafeLogo: 'data:image/png;base64,' + loadImage(templateDir, 'bizsafe3-logo.png'),
-      smeLogo: 'data:image/png;base64,' + loadImage(templateDir, 'sme500-logo.png')
-    },
-
   return {
     pageSize: 'A4',
     pageMargins: [30, 40, 30, 60], // footer space for badges
@@ -258,8 +251,8 @@ function generateDocDefinition(data) {
       };
     },
 
-    // (optional) images dictionary is usually injected by server (logo keys)
-    // images: { ... }
+    // Images dictionary is usually injected by server (logo keys)
+
 
     content: [
       headerColumns,
@@ -272,6 +265,13 @@ function generateDocDefinition(data) {
       { text: '', pageBreak: 'before' },
       ...termsAndConditions(data)
     ],
+
+     images: {
+      logo: 'data:image/png;base64,' + loadImage(templateDir, 'logo.png'),
+      bcaLogo: 'data:image/png;base64,' + loadImage(templateDir, 'bca-logo.png'),
+      bizsafeLogo: 'data:image/png;base64,' + loadImage(templateDir, 'bizsafe3-logo.png'),
+      smeLogo: 'data:image/png;base64,' + loadImage(templateDir, 'sme500-logo.png')
+    },
 
     styles: {
       companyName: { fontSize: 12, bold: true },
