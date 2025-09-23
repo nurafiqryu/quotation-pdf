@@ -33,7 +33,7 @@ function generateDocDefinition(data) {
       bizsafeLogo: 'data:image/png;base64,' + loadImage(templateDir, 'bizsafe3-logo.png')
     },
 
-    // Main content
+    // Main content (⚠️ keep your original structure)
     content: [
       // Header with company logo + info
       {
@@ -84,8 +84,8 @@ function generateDocDefinition(data) {
               item.description || '',
               item.quantity || '',
               item.unit || '',
-              { text: Number(item.unit_price || 0).toFixed(2), alignment: 'right' },
-              { text: Number(item.total_price || 0).toFixed(2), alignment: 'right' }
+              { text: (item.unit_price || 0).toFixed(2), alignment: 'right' },
+              { text: (item.total_price || 0).toFixed(2), alignment: 'right' }
             ])
           ]
         },
@@ -97,9 +97,9 @@ function generateDocDefinition(data) {
         table: {
           widths: ['*', 'auto'],
           body: [
-            ['Subtotal', Number(totals.subtotal || 0).toFixed(2)],
-            [`GST (${quotation.gst_rate || 9}%)`, Number(totals.gst || 0).toFixed(2)],
-            ['Total', Number(totals.total || 0).toFixed(2)]
+            ['Subtotal', totals.subtotal.toFixed(2)],
+            [`GST (${quotation.gst_rate || 9}%)`, totals.gst.toFixed(2)],
+            ['Total', totals.total.toFixed(2)]
           ]
         },
         margin: [0, 20, 0, 20],
