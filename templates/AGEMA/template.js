@@ -1,196 +1,285 @@
-const path = require('path');
-const { calculateTotals } = require('../../utils/totals');
-const styles = require('../../utils/styles');
-const { loadImage } = require('../../utils/imageLoader');
+// templates/AGEMA/template.js
 
-module.exports.build = (data) => {
-  const { customer, quotation } = data;
-  const templateDir = __dirname;
+function money(n) {
+  if (n === undefined || n === null || isNaN(n)) return '0.00';
+  return Number(n).toFixed(2);
+}
 
-  const totals = calculateTotals(quotation.items, quotation.gst_rate);
+function computeTotals(items = [], discountRate = 0, gstRate = 9) {
+  const subtotal = items.reduce((s, it) => s + (Number(it.total) || 0), 0);
+  const discountAmt = subtotal * (Number(discountRate) || 0) / 100;
+  const net = subtotal - discountAmt;
+  const gstAmt = net * (Number(gstRate) || 0) / 100;
+  const grand = net + gstAmt;
+  return { subtotal, discountAmt, net, gstAmt, grand };
+}
 
-  // Constant Terms & Conditions (no manual numbers, ol will handle numbering)
-  const defaultTerms = [
-    [
-      { text: 'Pricing and Payment:\n', bold: true },
-      'The prices quoted in this sales quotation are valid for a specified period stated in the quote and are subject to change without prior notice.\n',
-      'Payment terms are ', { text: '30 Days', bold: true }, ' from the day of invoice.\n',
-      'Late payments may be subject to a 5% interest fee or applicable penalties.'
-    ],
-    [
-      { text: 'Delivery and Shipping:\n', bold: true },
-      'Unless explicitly stated, the quoted prices do not include shipping or delivery costs.\n',
-      'The estimated delivery time is ', { text: '1 to 2 weeks', bold: true }, ' from the purchase order received.\n',
-      'Any delays in delivery beyond the estimated time shall be promptly communicated to the buyer.\n',
-      'The buyer is responsible for any packaging, handling, and transportation costs.'
-    ],
-    [
-      { text: 'Returns and Refunds:\n', bold: true },
-      'Returns or exchanges are accepted within [insert return/exchange period] days from delivery subject to these conditions:\n',
-      '- The product must be in its original condition, unused, and in its original packaging.\n',
-      '- Proof of purchase required.\n',
-      '- Restocking fee of 10% may apply.\n',
-      '- Buyer pays return shipping unless defect/error by seller.\n',
-      'Refunds issued within 60 days after inspection.'
-    ],
-    [
-      { text: 'Product Warranties:\n', bold: true },
-      'The products listed are covered by a warranty for ', { text: '12 months', bold: true }, ' from the date of delivery.\n',
-      'Covers defects in materials/workmanship under normal use.\n',
-      'Does not cover misuse, neglect, accidents, or unauthorized repairs.\n',
-      'Warranty claims must follow seller’s instructions.'
-    ],
-    [
-      { text: 'Limitation of Liability:\n', bold: true },
-      'The seller is not liable for any direct, indirect, incidental, or consequential damages.\n',
-      'Liability limited to purchase price of products.\n',
-      'This applies to damages, losses, or expenses incurred by the buyer or third parties.'
-    ]
+function termsAndConditions(data) {
+  // allow override via data.terms, else default
+  const txt = (s, bold=false) => ({ text: s, bold });
+  const bullet = (s, opt={}) => ({ text: s, margin: [10, 0, 0, 2], ...opt });
+
+  return [
+    { text: 'Terms & Conditions:', style: 'h2', margin: [0,0,0,6] },
+
+    // 1. Pricing and Payment
+    {
+      ol: [
+        [
+          { text: 'Pricing and Payment:', bold: true },
+          bullet('The prices quoted in this sales quotation are valid for a specified period stated in the quote and are subject to change without prior notice.'),
+          { text: 'Payment terms are ', margin: [10, 0, 0, 2] },
+          { text: '30 Days', bold: true, margin: [10, -12, 0, 0] },
+          bullet('from the day of invoice.'),
+          bullet('Late payments may be subject to a 5% interest fee or applicable penalties.')
+        ],
+        // 2. Delivery and Shipping
+        [
+          { text: 'Delivery and Shipping:', bold: true },
+          bullet('Unless explicitly stated, the quoted prices do not include shipping or delivery costs.'),
+          { text: 'The estimated delivery time is ', margin: [10, 0, 0, 2] },
+          { text: '1 to 2 weeks', bold: true, margin: [10, -12, 0, 0] },
+          bullet('from the purchase order received.'),
+          bullet('Any delays in delivery beyond the estimated time shall be promptly communicated to the buyer.'),
+          bullet('The buyer is responsible for any packaging and handling charges, and additional shipping or transportation costs.')
+        ],
+        // 3. Returns and Refunds
+        [
+          { text: 'Returns and Refunds:', bold: true },
+          bullet('Returns or exchanges are accepted within [insert return/exchange period] days from delivery subject to these conditions:'),
+          bullet('- The product must be in its original condition, unused, and in its original packaging.'),
+          bullet('- Proof of purchase required.'),
+          bullet('- A restocking fee of 10% of the original invoiced value may apply for returned products.'),
+          bullet('- Buyer pays return shipping unless defect/error by seller.'),
+          bullet('- Refunds issued within 60 days after inspection.')
+        ],
+        // 4. Product Warranties
+        [
+          { text: 'Product Warranties:', bold: true },
+          { text: 'The products listed in this sales quotation are covered by a warranty for a period of ', margin: [10,0,0,2] },
+          { text: '12 months', bold: true, margin: [10,-12,0,0] },
+          bullet('from the date of delivery.'),
+          bullet('Covers defects in materials and workmanship under normal use.'),
+          bullet('Does not cover misuse, neglect, accidents, or unauthorized repairs.'),
+          bullet('To initiate a claim, follow seller’s instructions.')
+        ],
+        // 5. Limitation of Liability
+        [
+          { text: 'Limitation of Liability:', bold: true },
+          bullet('The seller shall not be liable for any direct, indirect, incidental, or consequential damages arising from the sale or use of the products listed in this sales quotation.'),
+          bullet('The seller’s liability is limited to the purchase price of the products.'),
+          bullet('This limitation applies to damages, losses, or expenses incurred by the buyer or any third party.')
+        ]
+      ],
+      margin: [0,4,0,0]
+    }
   ];
+}
+
+function generateDocDefinition(data) {
+  const company = data.company || {};
+  const cust = data.customer || {};
+  const q = data.quotation || {};
+  const currency = q.currency || data.quote_currency || 'SGD';
+  const gstRate = Number(q.gst_rate ?? data.gst_rate ?? 9);
+  const discountRate = Number(q.discount_rate ?? data.discount_rate ?? 0);
+
+  const items = (q.items || []).map((it, idx) => ({
+    sno: it.sno ?? idx + 1,
+    product: it.product || '',
+    description: it.description || '',
+    qty: it.qty ?? it.quantity ?? 0,
+    uom: it.uom || it.unit || '',
+    unit_price: Number(it.unit_price || 0),
+    total: Number(it.total || (Number(it.qty || 0) * Number(it.unit_price || 0)))
+  }));
+
+  const totals = computeTotals(items, discountRate, gstRate);
+
+  const smallThanks =
+    'Thank you for your invitation to quote, we are pleased to submit our proposal for your kind evaluation.';
+
+  const headerColumns = {
+    columns: [
+      // Logo left
+      {
+        image: 'logo',
+        width: 120
+      },
+      // Company block right
+      {
+        stack: [
+          { text: company.name || 'AGEMA PTE LTD', style: 'companyName' },
+          { text: company.reg_no ? `Reg. No.\n${company.reg_no}` : '', style: 'companyMeta' },
+          { text: company.address || '50 Kallang Pudding Rd #07-07\nAMA Building\nSingapore 349326', style: 'companyMeta' },
+          { text: company.phone ? `Phone: ${company.phone}` : 'Phone: 6514 2063', style: 'companyMeta' },
+          { text: company.website || 'https://www.agema.com.sg', link: company.website || 'https://www.agema.com.sg', color: '#1a73e8', style: 'companyMeta' }
+        ],
+        alignment: 'right'
+      }
+    ],
+    columnGap: 10,
+    margin: [0, 0, 0, 8]
+  };
+
+  const partyBlock = {
+    columns: [
+      {
+        width: '60%',
+        stack: [
+          { text: 'TO:', style: 'label' },
+          { text: cust.name || '', style: 'value' },
+          { text: `ATTN: ${cust.attention || ''}`, style: 'value' },
+          { text: `Contact: ${cust.contact || ''}`, style: 'value' },
+          { text: `Address: ${cust.address || ''}`, style: 'value' },
+          { text: `Email: ${cust.email || ''}`, style: 'value' }
+        ]
+      },
+      {
+        width: '40%',
+        stack: [
+          { text: 'QUOTATION', style: 'h1', alignment: 'right', margin: [0,0,0,6] },
+          { text: `Date: ${q.date || ''}`, style: 'value', alignment: 'right' },
+          { text: `Reference: ${q.reference || ''}`, style: 'value', alignment: 'right' },
+          { text: `Currency: ${currency}`, style: 'value', alignment: 'right' },
+          { text: `Validity: ${q.validity || ''}`, style: 'value', alignment: 'right' },
+        ]
+      }
+    ],
+    columnGap: 16,
+    margin: [0, 6, 0, 10]
+  };
+
+  const itemsTable = {
+    table: {
+      widths: [60, '*', 40, 50, 70, 80],
+      body: [
+        [
+          { text: 'Product', style: 'th' },
+          { text: 'Description', style: 'th' },
+          { text: 'Qty', style: 'th', alignment: 'center' },
+          { text: 'UOM', style: 'th', alignment: 'center' },
+          { text: 'Unit Price', style: 'th', alignment: 'right' },
+          { text: 'Amount', style: 'th', alignment: 'right' }
+        ],
+        ...items.map(it => ([
+          { text: it.product || it.sno, style: 'td' },
+          { text: it.description, style: 'td' },
+          { text: it.qty, style: 'td', alignment: 'center' },
+          { text: it.uom, style: 'td', alignment: 'center' },
+          { text: money(it.unit_price), style: 'td', alignment: 'right' },
+          { text: money(it.total), style: 'td', alignment: 'right' }
+        ]))
+      ]
+    },
+    layout: {
+      fillColor: (rowIndex) => (rowIndex === 0 ? '#eeeeee' : null),
+      hLineColor: '#cccccc',
+      vLineColor: '#cccccc'
+    },
+    margin: [0, 4, 0, 8]
+  };
+
+  // Totals grid – discount RATE separate from AMOUNT
+  const totalsGrid = {
+    table: {
+      widths: ['*', 140, 120],
+      body: [
+        [
+          { text: '', border: [false, false, false, false] },
+          { text: `Subtotal (${currency})`, alignment: 'right', style: 'totalsRow' },
+          { text: money(totals.subtotal), alignment: 'right', style: 'totalsRow' }
+        ],
+        [
+          { text: '', border: [false, false, false, false] },
+          { text: `Discount (${discountRate || 0}%)`, alignment: 'right', style: 'totalsRow' },
+          { text: money(totals.discountAmt), alignment: 'right', style: 'totalsRow' }
+        ],
+        [
+          { text: '', border: [false, false, false, false] },
+          { text: `GST (${gstRate || 0}%) (${currency})`, alignment: 'right', style: 'totalsRow' },
+          { text: money(totals.gstAmt), alignment: 'right', style: 'totalsRow' }
+        ],
+        [
+          { text: '', border: [false, false, false, false] },
+          { text: `TOTAL (${currency})`, alignment: 'right', bold: true, style: 'totalsRow' },
+          { text: money(totals.grand), alignment: 'right', bold: true, style: 'totalsRow' }
+        ]
+      ]
+    },
+    layout: 'lightHorizontalLines',
+    margin: [0, 6, 0, 0]
+  };
+
+  const thankYou = { text: smallThanks, style: 'smallNote', margin: [0, 6, 0, 2] };
 
   return {
-    content: [
-      // Header
-      {
-        columns: [
-          { image: 'logo', width: 100 },
+    pageSize: 'A4',
+    pageMargins: [30, 40, 30, 60], // footer space for badges
+
+    // footer: badges only on last page; page number always centered
+    footer: function (currentPage, pageCount) {
+      const pageNum = { text: `Page ${currentPage} of ${pageCount}`, alignment: 'center', fontSize: 9, margin: [0, 0, 0, 8] };
+
+      if (currentPage !== pageCount) return pageNum;
+
+      // last page: right-aligned row, bottoms aligned
+      return {
+        stack: [
+          pageNum,
           {
-            stack: [
-              { text: 'AGEMA PTE LTD', style: 'title', alignment: 'right' },
-              { text: 'Reg. No.', style: 'value', alignment: 'right' },
-              { text: '50 Kallang Pudding Rd #07-07\nAMA Building\nSingapore 349326', style: 'value', alignment: 'right' },
-              { text: 'Phone: 6514 2063', style: 'value', alignment: 'right' },
-              { text: 'https://www.agema.com.sg', style: 'value', color: 'blue', link: 'https://www.agema.com.sg', alignment: 'right' }
-            ]
+            columns: [
+              { text: '' },
+              {
+                table: {
+                  widths: [50, 50, 50],
+                  body: [[
+                    { image: 'smeLogo', width: 36, alignment: 'right', margin: [0, 0, 4, 0] },
+                    { image: 'bcaLogo', width: 36, alignment: 'right', margin: [0, 0, 4, 0] },
+                    { image: 'bizsafeLogo', width: 36, alignment: 'right', margin: [0, 0, 0, 0] }
+                  ]]
+                },
+                layout: 'noBorders',
+                alignment: 'right',
+                margin: [0, 0, 0, 8]
+              }
+            ],
+            columnGap: 8
           }
         ]
-      },
-
-      '\n',
-      {
-        columns: [
-          [
-            { text: `${quotation.ref_no || ''}`, style: 'value' },
-            { text: `TO: ${customer.name || ''}`, style: 'value' },
-            { text: `ATTN: ${customer.attention || ''}`, style: 'value' },
-            { text: `Contact: ${customer.contact || ''}`, style: 'value' },
-            { text: `Address: ${customer.address || ''}`, style: 'value' }
-          ],
-          [
-            { text: 'QUOTATION', style: 'value', alignment: 'right' },
-            { text: `Date: ${quotation.date || ''}`, style: 'value', alignment: 'right' },
-            { text: `Reference: ${quotation.reference || ''}`, style: 'value', alignment: 'right' },
-            { text: `Currency: ${quotation.currency || 'SGD'}`, style: 'value', alignment: 'right' },
-            { text: `Validity: ${quotation.validity || ''}`, style: 'value', alignment: 'right' },
-            { text: `Pages: ${quotation.pages || ''}`, style: 'value', alignment: 'right' }
-          ]
-        ]
-      },
-
-      '\n',
-      { text: `Subject: ${quotation.subject || ''}`, style: 'subheader' },
-      { text: `Location: ${quotation.location || ''}`, style: 'value' },
-      '\n',
-
-      { text: 'Thank you for your invitation to quote, we are pleased to submit our proposal for your kind evaluation.', fontSize: 9, margin: [0, 0, 0, 10] },
-
-      // Items table with UOM
-      {
-        table: {
-          widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
-          body: [
-            [
-              { text: 'Product', style: 'tableHeader' },
-              { text: 'Description', style: 'tableHeader' },
-              { text: 'Qty', style: 'tableHeader' },
-              { text: 'UOM', style: 'tableHeader' },
-              { text: 'Unit Price (S$)', style: 'tableHeader' },
-              { text: 'Amount (S$)', style: 'tableHeader' }
-            ],
-            ...(quotation.items || []).map((item) => [
-              item.product || '',
-              item.description || '',
-              item.qty || '',
-              item.uom || '',
-              (item.unit_price || 0).toFixed(2),
-              (item.total || 0).toFixed(2)
-            ]),
-            [
-              { text: 'Subtotal (SGD)', colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
-              totals.formatted.subtotal
-            ],
-            [
- 		 { text: 'Discount Rate', colSpan: 4, alignment: 'right' }, {}, {}, {},
- 			 `${quotation.discount_rate || 0}%`,
- 			 (quotation.discount_amount || 0).toFixed(2)
-		],	
-            [
-              { text: `GST (${quotation.gst_rate || 0}%) (SGD)`, colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
-              totals.formatted.gst
-            ],
-            [
-              { text: 'TOTAL (SGD)', colSpan: 5, alignment: 'right', bold: true }, {}, {}, {}, {},
-              totals.formatted.finalPrice
-            ]
-          ]
-        }
-      },
-
-      '\n',
-      { text: 'Description:', style: 'subheader' },
-      { text: quotation.description || '', style: 'value' },
-
-      // Terms & Conditions (new page)
-      {
-        text: 'Terms & Conditions:',
-        style: 'subheader',
-        pageBreak: 'before'
-      },
-      { ol: defaultTerms, fontSize: 9 }
-    ],
-
-    styles,
-
-    images: {
-      logo: 'data:image/png;base64,' + loadImage(templateDir, 'logo.png'),
-      bcaLogo: 'data:image/png;base64,' + loadImage(templateDir, 'bca-logo.png'),
-      bizsafeLogo: 'data:image/png;base64,' + loadImage(templateDir, 'bizsafe3-logo.png'),
-      smeLogo: 'data:image/png;base64,' + loadImage(templateDir, 'sme500-logo.png')
+      };
     },
 
-    defaultStyle: { font: 'Roboto' },
+    // (optional) images dictionary is usually injected by server (logo keys)
+    // images: { ... }
 
-footer: (currentPage, pageCount) => {
-  if (currentPage === pageCount) {
-    return {
-      columns: [
-        {
-          text: `Page ${currentPage} of ${pageCount}`,
-          alignment: 'left',
-          fontSize: 9,
-          margin: [20, 0, 0, 0]
-        },
-        {
-          columns: [
-            { image: 'smeLogo', fit: [50, 35], margin: [5, 0, 0, 0] },
-            { image: 'bcaLogo', fit: [50, 35], margin: [5, 0, 0, 0] },
-            { image: 'bizsafeLogo', fit: [50, 35], margin: [5, 0, 0, 0] }
-          ],
-          alignment: 'right',
-          width: 'auto'
-        }
-      ],
-      margin: [20, 0, 20, 15] // left, top, right, bottom
-    };
-  }
+    content: [
+      headerColumns,
+      thankYou,
+      partyBlock,
+      itemsTable,
+      totalsGrid,
 
-  // Other pages: just show page number
-  return {
-    text: `Page ${currentPage} of ${pageCount}`,
-    alignment: 'center',
-    fontSize: 9,
-    margin: [0, 10, 0, 0]
+      // PAGE BREAK → T&C
+      { text: '', pageBreak: 'before' },
+      ...termsAndConditions(data)
+    ],
+
+    styles: {
+      companyName: { fontSize: 12, bold: true },
+      companyMeta: { fontSize: 9, lineHeight: 1.15 },
+      h1: { fontSize: 14, bold: true },
+      h2: { fontSize: 12, bold: true },
+      label: { bold: true, fontSize: 10, margin: [0, 2, 0, 0] },
+      value: { fontSize: 10, margin: [0, 0, 0, 1] },
+      th: { bold: true, fontSize: 10 },
+      td: { fontSize: 10 },
+      totalsRow: { fontSize: 10 },
+      smallNote: { fontSize: 9, color: '#333' }
+    },
+
+    defaultStyle: { fontSize: 10 }
   };
 }
-  };
-};
+
+module.exports = { generateDocDefinition };
