@@ -1,0 +1,25 @@
+{
+  "template": "AGEMA",
+  "customer": {
+    "name": "Keppel Data Centres",
+    "attention": "Alice Ng",
+    "contact": "+65 6987 5432",
+    "email": "alice.ng@keppel.com",
+    "address": "25 Serangoon North Ave 5, Singapore 554914"
+  },
+  "quotation": {
+    "ref_no": "QO/2404/021/FD",
+    "date": "2025-09-23",
+    "currency": "SGD",
+    "items": [
+      {
+        "description": "STROBE: Strobe Light Red",
+        "quantity": 2,
+        "unit": "Each",
+        "unit_price": 250,
+        "total_price": 500
+      }
+    ],
+    "gst_rate": 9
+  }
+}
