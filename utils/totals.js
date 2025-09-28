@@ -1,19 +1,30 @@
 // utils/totals.js
-const { formatCurrency } = require('./pdfHelpers');
 
-function calculateTotals(items, gstRate) {
-  const subtotal = (items || []).reduce((sum, it) => sum + (Number(it.total) || 0), 0);
-  const gst = +(subtotal * (gstRate || 0) / 100).toFixed(2);
-  const finalPrice = +(subtotal + gst).toFixed(2);
+function calculateTotals(items = [], gstRate = 0, discountRate = 0) {
+  // Sum all item totals
+  const subtotal = items.reduce((acc, item) => acc + (item.total_price || 0), 0);
+
+  // Apply discount
+  const discountAmount = (subtotal * (discountRate || 0)) / 100;
+  const discountedSubtotal = subtotal - discountAmount;
+
+  // Apply GST
+  const gst = (discountedSubtotal * (gstRate || 0)) / 100;
+  const finalPrice = discountedSubtotal + gst;
 
   return {
-    subtotal,
-    gst,
-    finalPrice,
+    raw: {
+      subtotal,
+      discountAmount,
+      discountedSubtotal,
+      gst,
+      finalPrice
+    },
     formatted: {
-      subtotal: formatCurrency(subtotal),
-      gst: formatCurrency(gst),
-      finalPrice: formatCurrency(finalPrice)
+      subtotal: subtotal.toFixed(2),
+      discountAmount: discountAmount.toFixed(2),
+      gst: gst.toFixed(2),
+      finalPrice: finalPrice.toFixed(2)
     }
   };
 }

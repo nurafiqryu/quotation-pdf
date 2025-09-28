@@ -7,13 +7,9 @@ function generateDocDefinition(data) {
   const { customer, quotation } = data;
   const templateDir = __dirname;
 
-  const totals = calculateTotals(
-    quotation.items || [],
-    quotation.gst_rate,
-    quotation.discount_rate
-  );
+  const totals = calculateTotals(quotation.items, quotation.gst_rate);
 
-  // ✅ Constant Terms & Conditions
+  // Constant Terms & Conditions
   const defaultTerms = [
     [
       { text: 'Pricing and Payment:\n', bold: true },
@@ -74,20 +70,19 @@ function generateDocDefinition(data) {
       {
         columns: [
           [
-            { text: `${quotation.ref_no || ''}`, style: 'refNo' },
+            { text: `${quotation.ref_no || ''}`, style: 'value' },
             { text: `TO: ${customer.name || ''}`, style: 'value' },
             { text: `ATTN: ${customer.attention || ''}`, style: 'value' },
             { text: `Contact: ${customer.contact || ''}`, style: 'value' },
             { text: `Address: ${customer.address || ''}`, style: 'value' }
           ],
           [
-            { text: 'QUOTATION', style: 'quotationHeader', alignment: 'right' },
+            { text: 'QUOTATION', style: 'value', alignment: 'right' },
             { text: `Date: ${quotation.date || ''}`, style: 'value', alignment: 'right' },
             { text: `Reference: ${quotation.reference || ''}`, style: 'value', alignment: 'right' },
             { text: `Currency: ${quotation.currency || 'SGD'}`, style: 'value', alignment: 'right' },
             { text: `Validity: ${quotation.validity || ''}`, style: 'value', alignment: 'right' },
-            // Pages will be inserted later by footer using pageCount
-            { text: 'Pages: (see footer)', style: 'value', alignment: 'right' }
+            { text: `Pages: ${quotation.pages || ''}`, style: 'value', alignment: 'right' }
           ]
         ]
       },
@@ -99,7 +94,7 @@ function generateDocDefinition(data) {
 
       { text: 'Thank you for your invitation to quote, we are pleased to submit our proposal for your kind evaluation.', fontSize: 9, margin: [0, 0, 0, 10] },
 
-      // Items table
+      // Items table with UOM
       {
         table: {
           widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
@@ -112,21 +107,22 @@ function generateDocDefinition(data) {
               { text: 'Unit Price (S$)', style: 'tableHeader' },
               { text: 'Amount (S$)', style: 'tableHeader' }
             ],
-            ...(quotation.items || []).map(item => [
+            ...(quotation.items || []).map((item) => [
               item.product || '',
               item.description || '',
-              item.quantity || 0,
+              item.qty || '',
               item.uom || '',
               (item.unit_price || 0).toFixed(2),
-              (item.total_price || 0).toFixed(2)
+              (item.total || 0).toFixed(2)
             ]),
             [
               { text: 'Subtotal (SGD)', colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
               totals.formatted.subtotal
             ],
             [
-              { text: `Discount (${quotation.discount_rate || 0}%)`, colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
-              totals.formatted.discountAmount
+              { text: 'Discount Rate', colSpan: 4, alignment: 'right' }, {}, {}, {},
+              `${quotation.discount_rate || 0}%`,
+              (quotation.discount_amount || 0).toFixed(2)
             ],
             [
               { text: `GST (${quotation.gst_rate || 0}%) (SGD)`, colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
@@ -144,7 +140,7 @@ function generateDocDefinition(data) {
       { text: 'Description:', style: 'subheader' },
       { text: quotation.description || '', style: 'value' },
 
-      // Terms & Conditions
+      // Terms & Conditions (new page)
       {
         text: 'Terms & Conditions:',
         style: 'subheader',
@@ -153,11 +149,7 @@ function generateDocDefinition(data) {
       { ol: defaultTerms, fontSize: 9 }
     ],
 
-    styles: {
-      ...styles,
-      refNo: { fontSize: 12, bold: true },
-      quotationHeader: { fontSize: 14, bold: true }
-    },
+    styles,
 
     images: {
       logo: 'data:image/png;base64,' + loadImage(templateDir, 'logo.png'),
@@ -191,7 +183,6 @@ function generateDocDefinition(data) {
           margin: [20, 0, 20, 15]
         };
       }
-
       return {
         text: `Page ${currentPage} of ${pageCount}`,
         alignment: 'center',
