@@ -1,6 +1,6 @@
 // utils/totals.js
 
-function computeTotals(items, discountRate = 0, gstRate = 0) {
+function calculateTotals(items, discountRate = 0, gstRate = 0) {
   const subtotal = items.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
 
   const discountAmount = (discountRate > 0) ? subtotal * (discountRate / 100) : 0;
