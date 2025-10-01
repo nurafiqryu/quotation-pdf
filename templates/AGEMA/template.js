@@ -141,10 +141,19 @@ pageBreak: null,
         { text: 'Subtotal (SGD)', alignment: 'right', bold: true, fontSize: 11 },
         { text: totals.formatted.subtotal, alignment: 'right', fontSize: 11 }
       ],
-      [
-        { text: `Discount (${quotation.discount_rate || 0}%)`, alignment: 'right', fontSize: 11 },
-        { text: (quotation.discount_amount || 0).toFixed(2), alignment: 'right', fontSize: 11 }
-      ],
+	[
+  	{ 
+  	  text: `Discount (${totals.discountRate || 0}%)`, 
+  	  alignment: 'right', 
+  	  fontSize: 11 
+	  },
+	  { 
+ 	   text: totals.formatted.discountAmount, 
+ 	   alignment: 'right', 
+ 	   fontSize: 11 
+ 	 }
+	],
+
       [
         { text: `GST (${quotation.gst_rate || 0}%) (SGD)`, alignment: 'right', fontSize: 11 },
         { text: totals.formatted.gst, alignment: 'right', fontSize: 11 }
