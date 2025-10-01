@@ -118,7 +118,7 @@ function generateDocDefinition(data) {
         item.qty || '',
         item.uom || '',
         (item.unit_price || 0).toFixed(2),
-        (item.total || 0).toFixed(2)
+        (item.total_price || item.total || 0).toFixed(2)
       ])
     ]
   },
