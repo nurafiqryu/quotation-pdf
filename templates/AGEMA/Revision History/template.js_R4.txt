@@ -99,120 +99,56 @@ function generateDocDefinition(data) {
 
       { text: 'Thank you for your invitation to quote, we are pleased to submit our proposal for your kind evaluation.', fontSize: 9, margin: [0, 0, 0, 10] },
 
-// Items Table
-{
-  table: {
-    widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
-    body: [
-      [
-        { text: 'Product', style: 'tableHeader' },
-        { text: 'Description', style: 'tableHeader' },
-        { text: 'Qty', style: 'tableHeader' },
-        { text: 'UOM', style: 'tableHeader' },
-        { text: 'Unit Price (S$)', style: 'tableHeader' },
-        { text: 'Amount (S$)', style: 'tableHeader' }
-      ],
-      ...(quotation.items || []).map((item) => [
-        item.product || '',
-        item.description || '',
-        item.qty || '',
-        item.uom || '',
-        (item.unit_price || 0).toFixed(2),
-        (item.total || 0).toFixed(2)
-      ])
-    ]
-  },
-  layout: {
-  hLineWidth: function () { return 0.5; },
-  vLineWidth: function () { return 0.5; },
-  hLineColor: function () { return '#000'; },
-  vLineColor: function () { return '#000'; }
-  },
-pageBreak: null,
-
-},
-
-// Totals Section (outside the table)
-{
-  table: {
-    widths: ['*', 'auto'],
-    body: [
-      [
-        { text: 'Subtotal (SGD)', alignment: 'right', bold: true, fontSize: 11 },
-        { text: totals.formatted.subtotal, alignment: 'right', fontSize: 11 }
-      ],
-      [
-        { text: `Discount (${quotation.discount_rate || 0}%)`, alignment: 'right', fontSize: 11 },
-        { text: (quotation.discount_amount || 0).toFixed(2), alignment: 'right', fontSize: 11 }
-      ],
-      [
-        { text: `GST (${quotation.gst_rate || 0}%) (SGD)`, alignment: 'right', fontSize: 11 },
-        { text: totals.formatted.gst, alignment: 'right', fontSize: 11 }
-      ],
-      [
-        { text: 'TOTAL (SGD)', alignment: 'right', bold: true, fontSize: 12 },
-        { text: totals.formatted.finalPrice, alignment: 'right', bold: true, fontSize: 12 }
-      ]
-    ]
-  },
-  layout: 'noBorders',
-  margin: [0, 10, 0, 0]
-},
-
-'\n',
-// Header
-{
-  columns: [
-    { image: 'logo', width: 100 },
-    {
-      stack: [
-        { text: 'AGEMA PTE LTD', style: 'title', alignment: 'right' },
-        { text: 'Reg. No.', style: 'value', alignment: 'right' },
-        { text: '50 Kallang Pudding Rd #07-07\nAMA Building\nSingapore 349326', style: 'value', alignment: 'right' },
-        { text: 'Phone: 6514 2063', style: 'value', alignment: 'right' },
-        { text: 'https://www.agema.com.sg', style: 'value', color: 'blue', link: 'https://www.agema.com.sg', alignment: 'right' }
-      ],
-      alignment: 'right'   // applies to whole stack
-    }
-  ],
-  pageBreak: 'before'     // ✅ this applies to the *whole columns block*
-},
-
-
-      '\n',
+      // Items table
       {
-        columns: [
-          [
-            { text: `${quotation.ref_no || ''}`, style: 'refNo' },
-            { text: `TO: ${customer.name || ''}`, style: 'value' },
-            { text: `ATTN: ${customer.attention || ''}`, style: 'value' },
-            { text: `Contact: ${customer.contact || ''}`, style: 'value' },
-            { text: `Address: ${customer.address || ''}`, style: 'value' }
-          ],
-          [
-            { text: 'QUOTATION', style: 'quotationHeader', alignment: 'right' },
-            { text: `Date: ${quotation.date || ''}`, style: 'value', alignment: 'right' },
-            { text: `Reference: ${quotation.reference || ''}`, style: 'value', alignment: 'right' },
-            { text: `Currency: ${quotation.currency || 'SGD'}`, style: 'value', alignment: 'right' },
-            { text: `Validity: ${quotation.validity || ''}`, style: 'value', alignment: 'right' },
-            // Pages will be inserted later by footer using pageCount
-            { text: 'Pages: (see footer)', style: 'value', alignment: 'right' }
+        table: {
+          widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
+          body: [
+            [
+              { text: 'Product', style: 'tableHeader' },
+              { text: 'Description', style: 'tableHeader' },
+              { text: 'Qty', style: 'tableHeader' },
+              { text: 'UOM', style: 'tableHeader' },
+              { text: 'Unit Price (S$)', style: 'tableHeader' },
+              { text: 'Amount (S$)', style: 'tableHeader' }
+            ],
+            ...(quotation.items || []).map(item => [
+              item.product || '',
+              item.description || '',
+              item.quantity || 0,
+              item.uom || '',
+              (item.unit_price || 0).toFixed(2),
+              (item.total_price || 0).toFixed(2)
+            ]),
+            [
+              { text: 'Subtotal (SGD)', colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
+              totals.formatted.subtotal
+            ],
+            [
+              { text: `Discount (${quotation.discount_rate || 0}%)`, colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
+              totals.formatted.discountAmount
+            ],
+            [
+              { text: `GST (${quotation.gst_rate || 0}%) (SGD)`, colSpan: 5, alignment: 'right' }, {}, {}, {}, {},
+              totals.formatted.gst
+            ],
+            [
+              { text: 'TOTAL (SGD)', colSpan: 5, alignment: 'right', bold: true }, {}, {}, {}, {},
+              totals.formatted.finalPrice
+            ]
           ]
-        ]
+        }
       },
 
       '\n',
-      { text: `Subject: ${quotation.subject || ''}`, style: 'subheader' },
-      { text: `Location: ${quotation.location || ''}`, style: 'value' },
-      '\n',
-
-      { text: 'Thank you for your invitation to quote, we are pleased to submit our proposal for your kind evaluation.', fontSize: 9, margin: [0, 0, 0, 10] },
-
+      { text: 'Description:', style: 'subheader' },
+      { text: quotation.description || '', style: 'value' },
 
       // Terms & Conditions
       {
         text: 'Terms & Conditions:',
         style: 'subheader',
+        pageBreak: 'before'
       },
       { ol: defaultTerms, fontSize: 9 }
     ],
@@ -220,7 +156,7 @@ pageBreak: null,
     styles: {
       ...styles,
       refNo: { fontSize: 12, bold: true },
-      quotationHeader: { fontSize: 12, bold: true }
+      quotationHeader: { fontSize: 14, bold: true }
     },
 
     images: {
