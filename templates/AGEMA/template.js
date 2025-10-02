@@ -7,11 +7,12 @@ function generateDocDefinition(data) {
   const { customer, quotation } = data;
   const templateDir = __dirname;
 
-  const totals = calculateTotals(
-    quotation.items || [],
-    quotation.gst_rate,
-    quotation.discount_rate
-  );
+const totals = calculateTotals(
+  quotation.items || [],
+  quotation.discount_rate,
+  quotation.gst_rate
+);
+
 
   // ✅ Constant Terms & Conditions
   const defaultTerms = [
@@ -112,14 +113,14 @@ function generateDocDefinition(data) {
         { text: 'Unit Price (S$)', style: 'tableHeader' },
         { text: 'Amount (S$)', style: 'tableHeader' }
       ],
-      ...(quotation.items || []).map((item) => [
-        item.product || '',
-        item.description || '',
-        item.qty || '',
-        item.uom || '',
-        (item.unit_price || 0).toFixed(2),
-        (item.total_price || item.total || 0).toFixed(2)
-      ])
+	...(quotation.items || []).map((item) => [
+ 	 item.product || '',
+ 	 item.description || '',
+	  item.qty || '',
+	  item.uom || 'Each',
+	  (item.unit_price || 0).toFixed(2),
+	  ((item.qty || 0) * (item.unit_price || 0)).toFixed(2)
+	])
     ]
   },
   layout: {

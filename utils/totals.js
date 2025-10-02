@@ -1,12 +1,20 @@
 // utils/totals.js
 
 function calculateTotals(items, discountRate = 0, gstRate = 0) {
-  const subtotal = items.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
+  // Ensure numbers
+  discountRate = parseFloat(discountRate) || 0;
+  gstRate = parseFloat(gstRate) || 0;
 
-  const discountAmount = (discountRate > 0) ? subtotal * (discountRate / 100) : 0;
+  const subtotal = items.reduce((sum, item) => {
+    const qty = parseFloat(item.qty) || 0;
+    const price = parseFloat(item.unit_price) || 0;
+    return sum + qty * price;
+  }, 0);
+
+  const discountAmount = subtotal * (discountRate / 100);
   const afterDiscount = subtotal - discountAmount;
 
-  const gstAmount = (gstRate > 0) ? afterDiscount * (gstRate / 100) : 0;
+  const gstAmount = afterDiscount * (gstRate / 100);
   const finalPrice = afterDiscount + gstAmount;
 
   return {
@@ -25,6 +33,4 @@ function calculateTotals(items, discountRate = 0, gstRate = 0) {
     }
   };
 }
-
-
 module.exports = { calculateTotals };
