@@ -88,7 +88,8 @@ const totals = calculateTotals(
             { text: `Currency: ${quotation.currency || 'SGD'}`, style: 'value', alignment: 'right' },
             { text: `Validity: ${quotation.validity || ''}`, style: 'value', alignment: 'right' },
             // Pages will be inserted later by footer using pageCount
-            { text: 'Pages: (see footer)', style: 'value', alignment: 'right' }
+            { text: 'Pages: (see footer)', style: 'value', alignment: 'right' },
+	    { text: `Salesperson: ${agent.name || ''}`, style: 'value', alignment: 'right' },
           ]
         ]
       },
