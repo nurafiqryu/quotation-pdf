@@ -7,6 +7,9 @@ function generateDocDefinition(data) {
   const { customer, quotation } = data;
   const templateDir = __dirname;
 
+// ✅ Safely extract salesperson name (works for both structures)
+  const salesperson = (quotation.salesperson || data.agent?.name || '');
+
 const totals = calculateTotals(
   quotation.items || [],
   quotation.discount_rate,
@@ -89,7 +92,7 @@ const totals = calculateTotals(
             { text: `Validity: ${quotation.validity || ''}`, style: 'value', alignment: 'right' },
             // Pages will be inserted later by footer using pageCount
             { text: 'Pages: (see footer)', style: 'value', alignment: 'right' },
-	    { text: `Salesperson: ${agent.name || ''}`, style: 'value', alignment: 'right' },
+	    { text: `Salesperson: ${salesperson}`, style: 'value', alignment: 'right' }
           ]
         ]
       },
@@ -207,7 +210,8 @@ pageBreak: null,
             { text: `Currency: ${quotation.currency || 'SGD'}`, style: 'value', alignment: 'right' },
             { text: `Validity: ${quotation.validity || ''}`, style: 'value', alignment: 'right' },
             // Pages will be inserted later by footer using pageCount
-            { text: 'Pages: (see footer)', style: 'value', alignment: 'right' }
+            { text: 'Pages: (see footer)', style: 'value', alignment: 'right' },
+	    { text: `Salesperson: ${salesperson}`, style: 'value', alignment: 'right' }
           ]
         ]
       },
